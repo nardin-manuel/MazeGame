@@ -41,12 +41,9 @@ type maze (width, height) =
 
     member this.createMaze =
         let createGrid =
-            for y in 0..height-1 do
-                for x in 0..width-1 do
-                    if x%2 = 1 (*|| y = width-1*) then
-                        horizWalls.[x,y] <- false
-                    if y%2 = 1 (*|| x = height-1*) then
-                        vertWalls.[x,y]<- false
+            Array2D.iteri(fun x y element -> if y%2 = 1 && x%2 = 1 then horizWalls.[x,y]<- false) horizWalls
+            
+
         let isLegalPoint (x,y) =
           x > 0 && x < width-1 && y > 0 && y < height-1
 
@@ -59,7 +56,7 @@ type maze (width, height) =
           if x1 <> x2 then
             horizWalls.[(min x1 x2)+1, y1] <- false            
           else
-            vertWalls.[x1, (min y1 y2)+1] <- false
+            horizWalls.[x1, (min y1 y2)+1] <- false
             
 
         let rec visit (x,y as p) = 
@@ -74,8 +71,8 @@ type maze (width, height) =
         createGrid
         //visit (rnd_int 1 width, rnd_int 1 height)
         visit (1, 1)
-        //horizWalls, vertWalls
-        vertWalls,horizWalls
+        horizWalls, vertWalls
+        //vertWalls,horizWalls
 
     member this.drawMaze(horizWalls : bool[,], vertWalls : bool[,]) =
         image(width,height, [|
@@ -86,15 +83,15 @@ type maze (width, height) =
                     //    yield CharInfo.joinWall
                     if horizWalls.[x,y]  then
                         yield CharInfo.h_wall          
-                    else if vertWalls.[x,y] then
-                        yield CharInfo.v_wall
+                    //else if vertWalls.[x,y] then
+                    //    yield CharInfo.v_wall
                     else yield CharInfo.empty
                     |])
 
 let main()=
     let w = 61
     let h = 61
-    let engine = new engine (w+1,h+1)
+    let engine = new engine (w,h)
     engine.show_fps <- false
     let offset_w = 0
     let offset_h = 0
