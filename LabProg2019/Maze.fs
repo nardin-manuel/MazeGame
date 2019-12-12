@@ -14,10 +14,9 @@ open Engine
 
 let rnd = System.Random()
 type CharInfo with
-    static member v_wall = pixel.create (Config.vertical_wall_pixel_char, Color.White)
-    static member h_wall = pixel.create (Config.horizontal_wall_pixel_char, Color.White)
-    static member wall = pixel.create(Config.filled_pixel_char, Color.White)
-    static member joinWall = pixel.create(Config.join_wall_pixel_char, Color.White)
+    static member wall = pixel.create(Config.filled_pixel_char, Color.DarkGray)
+    static member background = pixel.create(Config.filled_pixel_char, Color.DarkBlue)
+    static member player = pixel.create(char('\178'),Color.Red)
     static member internal path = pixel.filled Color.Black
 
 // TASK 1: implement the maze type
@@ -30,20 +29,12 @@ type state = {
 }
 
 type maze (width, height) =        
-    //let choose (xs:_ list) = xs.[rnd_int 0 xs.Length]
-    let horizWalls = Array2D.create width height true
-        // (x,y) -> is there a wall between (x,y) and (x,y+1)?
-    let vertWalls = Array2D.create width height  true
+    let walls = Array2D.init width height (fun x y -> not(x%2=1 && y%2=1)) // same as -> if x%2=1 && y%2=1 then false else true
     let visited = Array2D.create width height false
-    // (x,y) -> is there a wall between (x,y) and (x+1,y)?
     let solution = Array2D.create width height (0,0)
 
 
-    member this.createMaze =
-        let createGrid =
-            Array2D.iteri(fun x y element -> if y%2 = 1 && x%2 = 1 then horizWalls.[x,y]<- false) horizWalls
-            
-
+    member this.createMaze =   
         let isLegalPoint (x,y) =
           x > 0 && x < width-1 && y > 0 && y < height-1
 
@@ -54,9 +45,10 @@ type maze (width, height) =
  
         let removeWallBetween (x1,y1) (x2,y2) =
           if x1 <> x2 then
-            horizWalls.[(min x1 x2)+1, y1] <- false            
+            
+            walls.[(x1+x2)/2, y1] <- false            
           else
-            horizWalls.[x1, (min y1 y2)+1] <- false
+            walls.[x1, (y1+y2)/2] <- false
             
 
         let rec visit (x,y as p) = 
@@ -67,42 +59,35 @@ type maze (width, height) =
               solution.[nx,ny] <- x,y
               removeWallBetween p n //tolgo il muro
               visit n //lo visito
- 
-        createGrid
-        //visit (rnd_int 1 width, rnd_int 1 height)
-        visit (1, 1)
-        horizWalls, vertWalls
-        //vertWalls,horizWalls
 
-    member this.drawMaze(horizWalls : bool[,], vertWalls : bool[,]) =
-        image(width,height, [|
-            for y in 0..height-1 do
-                //yield CharInfo.wall
-                for x in 0..width-1 do                    
-                    //if horizWalls.[x,y] && vertWalls.[x,y] then
-                    //    yield CharInfo.joinWall
-                    if horizWalls.[x,y]  then
-                        yield CharInfo.h_wall          
-                    //else if vertWalls.[x,y] then
-                    //    yield CharInfo.v_wall
-                    else yield CharInfo.empty
+        visit (1, 1)
+        walls
+
+    member this.drawMaze(horizWalls : bool[,]) =
+        image(width,height,[|                 
+            for y in 0..horizWalls.GetLength(1)-1 do
+               for x in 0..horizWalls.GetLength(0)-1 do                    
+                   if horizWalls.[x,y]  then
+                        yield CharInfo.wall    
+                   else yield CharInfo.background
                     |])
+                
 
 let main()=
     let w = 61
-    let h = 61
+    let h = 21
     let engine = new engine (w,h)
     engine.show_fps <- false
     let offset_w = 0
     let offset_h = 0
     let maze = maze(w, h)    
-    let mazeImg = maze.drawMaze(maze.createMaze)
-    let backgroud = image.rectangle(w+2,h+2,pixel.create('*', Color.Red))
+    let mazeImg = maze.drawMaze(maze.createMaze)   
     let mazeSpr = engine.create_and_register_sprite(mazeImg,offset_w,offset_h,0)
-    let player = engine.create_and_register_sprite(image.rectangle(1,1, pixel.create(char('*'), Color.Red)),offset_w+1,offset_h+1,0)
+    let player = engine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),offset_w+1,offset_h+1,1)
+
 
     let my_update (key : ConsoleKeyInfo) (screen : wronly_raster) (st : state) =
-        let dx, dy =
+        let dx, dy as nextMove=
             match key.KeyChar with
             |'w' -> 0.,-1.
             |'a'-> -1.,0.
@@ -110,12 +95,10 @@ let main()=
             |'d'-> 1.,0.
             |_ -> 0.,0.
 
-        //screen.
-        if not (st.player.checkCollissionWith(dx, dy, mazeSpr)) then
+        if not (st.player.checkCollissionWith(nextMove, mazeSpr, CharInfo.wall)) then
             st.player.move_by(dx, dy)
         st, key.KeyChar = 'q'
-    
-    //engine.create_and_register_sprite(backgroud,offset_w,offset_h,0) |> ignore
+
 
     let st0 = { 
         maze = mazeSpr

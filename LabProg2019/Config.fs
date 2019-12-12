@@ -8,14 +8,8 @@ module LabProg2019.Config
 
 open Prelude
 
-let filled_pixel_char = '*' //'\u2588'    // ascii '\219' for character '█'
-let vertical_wall_pixel_char = '\219' //'\u2588'    // ascii '\219' for character '█'
-let horizontal_wall_pixel_char = '\219'
-let join_wall_pixel_char ='\197'
-let angular_left_up_char ='\217'
-let angular_right_down_char = '\218'
-let angular_left_down_char ='\191'
-let angular_right_up_char ='\192'
+let filled_pixel_char = '\219' //'\u2588'    // ascii '\219' for character '█'
+
 
 let empty_pixel_char = ' '
 

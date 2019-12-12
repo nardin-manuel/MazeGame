@@ -362,10 +362,9 @@ type sprite (img : image, x_ : int, y_ : int, z_ : int) =
     member this.dryMove(dx,dy) =
         this.x+dx, this.y+dy
 
-    member this.checkCollissionWith (dx, dy, object: sprite) =
+    member this.checkCollissionWith ((dx,dy), object:sprite, char) =
         let nx, ny = this.dryMove(dx, dy)
-        Log.msg "Check %f, %f" (nx-this.x) (ny-this.y)
-        not (object.get(int(nx), int(ny)) = pixel.empty)
+        object.get(int(nx), int(ny)) = char
         
 
 
