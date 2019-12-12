@@ -41,25 +41,25 @@ type maze (width, height) =
 
     member this.createMaze =
         let createGrid =
-            for y in 0..width-1 do
-                for x in 0..height-1 do
-                    if x%2 = 1 || y = width-1 then
+            for y in 0..height-1 do
+                for x in 0..width-1 do
+                    if x%2 = 1 (*|| y = width-1*) then
                         horizWalls.[x,y] <- false
-                    if y%2 = 1 || x = height-1 then
+                    if y%2 = 1 (*|| x = height-1*) then
                         vertWalls.[x,y]<- false
         let isLegalPoint (x,y) =
-          x >= 0 && x < width && y >= 0 && y < height
+          x > 0 && x < width-1 && y > 0 && y < height-1
 
         let neighbours (x,y) = 
-          [(x-1,y);(x+1,y);(x,y-1);(x,y+1)]
+          [(x-2,y);(x+2,y);(x,y-2);(x,y+2)]
           |> List.filter isLegalPoint
           |> List.sortBy (fun x -> rnd.Next())
  
         let removeWallBetween (x1,y1) (x2,y2) =
           if x1 <> x2 then
-            horizWalls.[max x1 x2, y1] <- false            
+            horizWalls.[(min x1 x2)+1, y1] <- false            
           else
-            vertWalls.[x1, max y1 y2] <- false
+            vertWalls.[x1, (min y1 y2)+1] <- false
             
 
         let rec visit (x,y as p) = 
@@ -73,18 +73,18 @@ type maze (width, height) =
  
         createGrid
         //visit (rnd_int 1 width, rnd_int 1 height)
-        visit (0, 0)
+        visit (1, 1)
         //horizWalls, vertWalls
         vertWalls,horizWalls
 
     member this.drawMaze(horizWalls : bool[,], vertWalls : bool[,]) =
         image(width,height, [|
-            for y in 0..width-1 do
+            for y in 0..height-1 do
                 //yield CharInfo.wall
-                for x in 0..height-1 do
-                    if horizWalls.[x,y] && vertWalls.[x,y] then
-                        yield CharInfo.joinWall
-                    else if horizWalls.[x,y]  then
+                for x in 0..width-1 do                    
+                    //if horizWalls.[x,y] && vertWalls.[x,y] then
+                    //    yield CharInfo.joinWall
+                    if horizWalls.[x,y]  then
                         yield CharInfo.h_wall          
                     else if vertWalls.[x,y] then
                         yield CharInfo.v_wall
@@ -92,16 +92,17 @@ type maze (width, height) =
                     |])
 
 let main()=
-    let engine = new engine (230,60)
-    let w = 40
-    let h = 40
-    let offset_w = 15
-    let offset_h = 2
+    let w = 61
+    let h = 61
+    let engine = new engine (w+1,h+1)
+    engine.show_fps <- false
+    let offset_w = 0
+    let offset_h = 0
     let maze = maze(w, h)    
     let mazeImg = maze.drawMaze(maze.createMaze)
     let backgroud = image.rectangle(w+2,h+2,pixel.create('*', Color.Red))
     let mazeSpr = engine.create_and_register_sprite(mazeImg,offset_w,offset_h,0)
-    let player = engine.create_and_register_sprite(image.rectangle(1,1, pixel.create(char('*'), Color.Red)),offset_w,offset_h,0)
+    let player = engine.create_and_register_sprite(image.rectangle(1,1, pixel.create(char('*'), Color.Red)),offset_w+1,offset_h+1,0)
 
     let my_update (key : ConsoleKeyInfo) (screen : wronly_raster) (st : state) =
         let dx, dy =
