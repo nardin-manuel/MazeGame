@@ -37,32 +37,66 @@ type maze (width, height) =
     member this.createMaze() =   
         let isLegalPoint (x,y) =
           x > 0 && x < width-1 && y > 0 && y < height-1
+        let isNotLegalPoint(x,y) =
+            not(isLegalPoint(x,y))
 
         let neighbours (x,y) = 
           [(x-2,y);(x+2,y);(x,y-2);(x,y+2)]
           |> List.filter isLegalPoint
           |> List.sortBy (fun x -> rnd.Next())
- 
-        let removeWallBetween (x1,y1) (x2,y2) =
+
+        let perimeterWall(x,y):int*int =
+            [(x-2,y);(x+2,y);(x,y-2);(x,y+2)]
+            |> List.filter isNotLegalPoint
+            |> List.sortBy(fun x -> rnd.Next())
+            |> List.head
+
+        let perimeterCells() =
+            [(rnd.Next(1, width-1), 1);//top cell
+             (width-1, rnd.Next(1, height-1)); //right cell
+             (rnd.Next(1, width-1), height-1);//bottom cell
+             (1, rnd.Next(1, height-1)) //left cell
+            ]
+            |>List.sortBy(fun x -> rnd.Next())
+            |>List.head
+
+
+        ///Function that remove the wall between two cell.
+        let removeWallBetween ((x1,y1), (x2,y2)) =
           if x1 <> x2 then            
             this.walls.[(x1+x2)/2, y1] <- false
             this.solution.[(x1+x2)/2 , y1] <- x1, y1
-            this.solution.[x2, y2] <- (x1+x2)/2 , y1
-          else
+            if isLegalPoint(x2,y2) then
+                this.solution.[x2, y2] <- (x1+x2)/2 , y1
+           else
             this.walls.[x1, (y1+y2)/2] <- false
-            this.solution.[x1 , (y1+y2)/2] <- x1,y1
-            this.solution.[x2,y2] <- x1 , (y1+y2)/2
+            this.solution.[x1, (y1+y2)/2] <- x1,y1
+            if isLegalPoint(x2,y2) then
+                this.solution.[x2,y2] <- x1 , (y1+y2)/2
 
+        ///Create a random exit removing a random wall in perimeter
+        let createRandomExit = 
+            let randomCell = perimeterCells()
+            removeWallBetween(randomCell, perimeterWall(randomCell))
+
+        ///Create an entrance removing one of the perimeter wall sorrounding the player
+        let createEntrance(x,y) = 
+            removeWallBetween((x,y), perimeterWall(x,y))
+
+        ///Recursive function that visit any unvisited neighbours
         let rec visit (x,y as p) = 
-          this.visited.[x,y] <- true //salvo che quella cella la ho visitata 
+          this.visited.[x,y] <- true
           for (nx,ny) as n in neighbours p do          
-            if not this.visited.[nx,ny] then //se quel vicino non lo ho visitato
+            if not this.visited.[nx,ny] then
               this.visited.[x,y] <- true
-             // this.solution.[nx,ny] <- x,y //per arrivare al vicino(pos + 2) passa per pos
-              removeWallBetween p n //tolgo il muro
-              visit n //lo visito
-
+              removeWallBetween(p,n)
+              visit n
+          
+        
+        createEntrance(1,1)
         visit (1, 1)
+        createRandomExit
+        
 
     member this.drawMaze() =
         image(width,height,[|                 
@@ -105,8 +139,8 @@ type maze (width, height) =
                 
 
 let main()=
-    let w = 61
-    let h = 21
+    let w = 201
+    let h = 61
     let engine = new engine (w,h)
     engine.show_fps <- false
     let offset_w = 0
@@ -114,10 +148,10 @@ let main()=
     let maze = maze(w, h)
     maze.createMaze()
     let mazeImg = maze.drawMaze() 
-    let solutionImg = maze.solveMaze((1,1) , (33,19))
+    let solutionImg = maze.solveMaze((1,1) , (73,19))
     let mazeSpr = engine.create_and_register_sprite(mazeImg,offset_w,offset_h,0)
-    let player = engine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),offset_w+1,offset_h+1,1)
-    let solutionSpr = engine.create_and_register_sprite(solutionImg,offset_w,offset_h,2)
+    let player = engine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),offset_w+1,offset_h+1,2)
+    let solutionSpr = engine.create_and_register_sprite(solutionImg,offset_w,offset_h,1)
 
 
     let my_update (key : ConsoleKeyInfo) (screen : wronly_raster) (st : state) =
