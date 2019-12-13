@@ -17,7 +17,7 @@ type CharInfo with
     static member wall = pixel.create(Config.filled_pixel_char, Color.DarkGray)
     static member background = pixel.create(Config.filled_pixel_char, Color.DarkBlue)
     static member player = pixel.create(char('\178'),Color.Red)
-    static member internal path = pixel.filled Color.Black
+    static member internal path = pixel.filled Color.Green
 
 // TASK 1: implement the maze type
 
@@ -29,12 +29,12 @@ type state = {
 }
 
 type maze (width, height) =        
-    let walls = Array2D.init width height (fun x y -> not(x%2=1 && y%2=1)) // same as -> if x%2=1 && y%2=1 then false else true
-    let visited = Array2D.create width height false
-    let solution = Array2D.create width height (0,0)
+    member val walls = Array2D.init width height (fun x y -> not(x%2=1 && y%2=1)) // same as -> if x%2=1 && y%2=1 then false else true
+    member val visited = Array2D.create width height false
+    member val solution = Array2D.create width height (0,0) : (int*int)[,]
 
 
-    member this.createMaze =   
+    member this.createMaze() =   
         let isLegalPoint (x,y) =
           x > 0 && x < width-1 && y > 0 && y < height-1
 
@@ -44,33 +44,64 @@ type maze (width, height) =
           |> List.sortBy (fun x -> rnd.Next())
  
         let removeWallBetween (x1,y1) (x2,y2) =
-          if x1 <> x2 then
-            
-            walls.[(x1+x2)/2, y1] <- false            
+          if x1 <> x2 then            
+            this.walls.[(x1+x2)/2, y1] <- false
+            this.solution.[(x1+x2)/2 , y1] <- x1, y1
+            this.solution.[x2, y2] <- (x1+x2)/2 , y1
           else
-            walls.[x1, (y1+y2)/2] <- false
-            
+            this.walls.[x1, (y1+y2)/2] <- false
+            this.solution.[x1 , (y1+y2)/2] <- x1,y1
+            this.solution.[x2,y2] <- x1 , (y1+y2)/2
 
         let rec visit (x,y as p) = 
-          visited.[x,y] <- true //salvo che quella cella la ho visitata 
+          this.visited.[x,y] <- true //salvo che quella cella la ho visitata 
           for (nx,ny) as n in neighbours p do          
-            if not visited.[nx,ny] then //se quel vicino non lo ho visitato
-              visited.[x,y] <- true
-              solution.[nx,ny] <- x,y
+            if not this.visited.[nx,ny] then //se quel vicino non lo ho visitato
+              this.visited.[x,y] <- true
+             // this.solution.[nx,ny] <- x,y //per arrivare al vicino(pos + 2) passa per pos
               removeWallBetween p n //tolgo il muro
               visit n //lo visito
 
         visit (1, 1)
-        walls
 
-    member this.drawMaze(horizWalls : bool[,]) =
+    member this.drawMaze() =
         image(width,height,[|                 
-            for y in 0..horizWalls.GetLength(1)-1 do
-               for x in 0..horizWalls.GetLength(0)-1 do                    
-                   if horizWalls.[x,y]  then
+            for y in 0..height-1 do
+               for x in 0..width-1 do                    
+                   if this.walls.[x,y]  then
                         yield CharInfo.wall    
                    else yield CharInfo.background
                     |])
+    
+    member this.solveMaze(startPoint, endPoint) =
+        let createSolutionMatrix =
+            let mutable p = endPoint
+            [|
+            yield p
+            while not(p = startPoint) do 
+                p <- this.solution.[fst(p), snd(p)]
+                yield p     
+            |]
+
+        let solution = createSolutionMatrix            
+        
+        image(width, height, [|
+        for y in 0..height-1 do
+            for x in 0..width-1 do          
+                if Array.contains (x,y) solution then
+                    if (x,y) = startPoint || (x,y) = endPoint then
+                        yield pixel.filled(Color.Yellow)
+                    else
+                        yield CharInfo.path
+                else
+                    yield CharInfo.empty
+        |])
+
+            
+            
+        
+
+
                 
 
 let main()=
@@ -80,10 +111,13 @@ let main()=
     engine.show_fps <- false
     let offset_w = 0
     let offset_h = 0
-    let maze = maze(w, h)    
-    let mazeImg = maze.drawMaze(maze.createMaze)   
+    let maze = maze(w, h)
+    maze.createMaze()
+    let mazeImg = maze.drawMaze() 
+    let solutionImg = maze.solveMaze((1,1) , (33,19))
     let mazeSpr = engine.create_and_register_sprite(mazeImg,offset_w,offset_h,0)
     let player = engine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),offset_w+1,offset_h+1,1)
+    let solutionSpr = engine.create_and_register_sprite(solutionImg,offset_w,offset_h,2)
 
 
     let my_update (key : ConsoleKeyInfo) (screen : wronly_raster) (st : state) =
@@ -97,6 +131,7 @@ let main()=
 
         if not (st.player.checkCollissionWith(nextMove, mazeSpr, CharInfo.wall)) then
             st.player.move_by(dx, dy)
+            Log.msg "Player position: x:%f,y:%f" st.player.x st.player.y
         st, key.KeyChar = 'q'
 
 
