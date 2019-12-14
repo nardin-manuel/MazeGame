@@ -63,16 +63,20 @@ type maze (width, height) =
 
         ///Function that remove the wall between two cell.
         let removeWallBetween ((x1,y1), (x2,y2)) =
-          if x1 <> x2 then            
-            this.walls.[(x1+x2)/2, y1] <- false
-            this.solution.[(x1+x2)/2 , y1] <- x1, y1
+          if x1 <> x2 then
+            let wallPos = (x1+x2)/2
+            this.walls.[wallPos, y1] <- false
+            this.solution.[wallPos , y1] <- x1, y1
             if isLegalPoint(x2,y2) then
-                this.solution.[x2, y2] <- (x1+x2)/2 , y1
+                this.solution.[x2, y2] <- wallPos , y1
+            wallPos, y1
            else
-            this.walls.[x1, (y1+y2)/2] <- false
-            this.solution.[x1, (y1+y2)/2] <- x1,y1
+            let wallPos = (y1+y2)/2
+            this.walls.[x1, wallPos] <- false
+            this.solution.[x1, wallPos] <- x1,y1
             if isLegalPoint(x2,y2) then
-                this.solution.[x2,y2] <- x1 , (y1+y2)/2
+                this.solution.[x2,y2] <- x1 , wallPos
+            x1, wallPos
 
         ///Create a random exit removing a random wall in perimeter
         let createRandomExit = 
@@ -89,13 +93,15 @@ type maze (width, height) =
           for (nx,ny) as n in neighbours p do          
             if not this.visited.[nx,ny] then
               this.visited.[x,y] <- true
-              removeWallBetween(p,n)
+              removeWallBetween(p,n)|>ignore
               visit n
           
         
-        createEntrance(1,1)
+        let entranceWall = createEntrance(1,1)
         visit (1, 1)
-        createRandomExit
+        let exitWall = createRandomExit
+        Log.msg "Entrance wall: %A. Exit wall: %A" entranceWall exitWall
+        entranceWall, exitWall
         
 
     member this.drawMaze() =
@@ -108,6 +114,10 @@ type maze (width, height) =
                     |])
     
     member this.solveMaze(startPoint, endPoint) =
+       
+
+        //if this.walls.[fst(endPoint), snd(endPoint)] then
+            
         let createSolutionMatrix =
             let mutable p = endPoint
             [|
@@ -146,9 +156,9 @@ let main()=
     let offset_w = 0
     let offset_h = 0
     let maze = maze(w, h)
-    maze.createMaze()
+    let entrancWall, exitWall = maze.createMaze()
     let mazeImg = maze.drawMaze() 
-    let solutionImg = maze.solveMaze((1,1) , (73,19))
+    let solutionImg = maze.solveMaze((1,1) , (50,50))
     let mazeSpr = engine.create_and_register_sprite(mazeImg,offset_w,offset_h,0)
     let player = engine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),offset_w+1,offset_h+1,2)
     let solutionSpr = engine.create_and_register_sprite(solutionImg,offset_w,offset_h,1)
