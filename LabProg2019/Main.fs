@@ -30,7 +30,8 @@ let main_game () =
     Log <- new remote_logger (client)
 
     // TODO: call your main here
-    Maze.main()
+    //Maze.main()
+    Menu.main()
     0
 
 // log mode (server)

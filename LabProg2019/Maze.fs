@@ -1,7 +1,7 @@
 ﻿(*
 * LabProg2019 - Progetto di Programmazione a.a. 2019-20
 * Maze.fs: maze
-* (C) 2019 Alvise Spano' @ Universita' Ca' Foscari di Venezia
+* (C) 2019 Manuel Nardin @ Universita' Ca' Foscari di Venezia
 *)
 
 module LabProg2019.Maze
@@ -9,7 +9,6 @@ module LabProg2019.Maze
 open System
 open External
 open Gfx
-open System.Text
 open Engine
 
 let rnd = System.Random()
@@ -23,12 +22,15 @@ type CharInfo with
 
 
 
-type state = {
+type mazeState = {
     maze : sprite
     player: sprite
 }
 
-type maze (width, height) =        
+
+
+type maze (width, height) =    
+
     member val walls = Array2D.init width height (fun x y -> not(x%2=1 && y%2=1)) // same as -> if x%2=1 && y%2=1 then false else true
     member val visited = Array2D.create width height false
     member val solution = Array2D.create width height (0,0) : (int*int)[,]
@@ -52,10 +54,10 @@ type maze (width, height) =
             |> List.head
 
         let perimeterCells() =
-            [(rnd.Next(1, width-1), 1);//top cell
-             (width-1, rnd.Next(1, height-1)); //right cell
-             (rnd.Next(1, width-1), height-1);//bottom cell
-             (1, rnd.Next(1, height-1)) //left cell
+            [(rnd.Next(1, width-2), 1);//top cell
+             (width-2, rnd.Next(1, height-2)); //right cell
+             (rnd.Next(1, width-2), height-2);//bottom cell
+             (1, rnd.Next(1, height-2)) //left cell
             ]
             |>List.sortBy(fun x -> rnd.Next())
             |>List.head
@@ -79,13 +81,24 @@ type maze (width, height) =
             x1, wallPos
 
         ///Create a random exit removing a random wall in perimeter
-        let createRandomExit = 
+        let rec createRandomExit() : int*int = 
             let randomCell = perimeterCells()
-            removeWallBetween(randomCell, perimeterWall(randomCell))
+            Log.msg "Creo un'uscita"
+            let x,y as exitPoint = removeWallBetween((randomCell), perimeterWall(randomCell))
+            let nx,ny = [(x+1,y);(x-1,y);(x,y+1);x,(y-1)]
+                        |>List.filter isLegalPoint 
+                        |>List.exactlyOne
+
+            if this.walls.[nx,ny] then
+                createRandomExit()
+            else
+                exitPoint
+                        
 
         ///Create an entrance removing one of the perimeter wall sorrounding the player
         let createEntrance(x,y) = 
             removeWallBetween((x,y), perimeterWall(x,y))
+   
 
         ///Recursive function that visit any unvisited neighbours
         let rec visit (x,y as p) = 
@@ -99,7 +112,7 @@ type maze (width, height) =
         
         let entranceWall = createEntrance(1,1)
         visit (1, 1)
-        let exitWall = createRandomExit
+        let exitWall = createRandomExit()
         Log.msg "Entrance wall: %A. Exit wall: %A" entranceWall exitWall
         entranceWall, exitWall
         
@@ -114,57 +127,52 @@ type maze (width, height) =
                     |])
     
     member this.solveMaze(startPoint, endPoint) =
-       
+    
+            let createSolutionMatrix =
+                let mutable p = endPoint
+                [|
+                yield p
+                while not(p = startPoint) do 
+                    p <- this.solution.[fst(p), snd(p)]
+                    yield p     
+                |]
 
-        //if this.walls.[fst(endPoint), snd(endPoint)] then
-            
-        let createSolutionMatrix =
-            let mutable p = endPoint
-            [|
-            yield p
-            while not(p = startPoint) do 
-                p <- this.solution.[fst(p), snd(p)]
-                yield p     
-            |]
-
-        let solution = createSolutionMatrix            
+            let solution = createSolutionMatrix            
         
-        image(width, height, [|
-        for y in 0..height-1 do
-            for x in 0..width-1 do          
-                if Array.contains (x,y) solution then
-                    if (x,y) = startPoint || (x,y) = endPoint then
-                        yield pixel.filled(Color.Yellow)
+            image(width, height, [|
+            for y in 0..height-1 do
+                for x in 0..width-1 do          
+                    if Array.contains (x,y) solution then
+                        if (x,y) = startPoint || (x,y) = endPoint then
+                            yield pixel.filled(Color.Yellow)
+                        else
+                            yield CharInfo.path
                     else
-                        yield CharInfo.path
-                else
-                    yield CharInfo.empty
-        |])
-
-            
-            
-        
+                        yield CharInfo.empty
+            |])             
 
 
-                
+    
+    
 
 let main()=
     let w = 201
     let h = 61
-    let engine = new engine (w,h)
-    engine.show_fps <- false
+    let mazeEngine = new engine (w,h)
+    mazeEngine.show_fps <- false
+   
     let offset_w = 0
     let offset_h = 0
     let maze = maze(w, h)
     let entrancWall, exitWall = maze.createMaze()
     let mazeImg = maze.drawMaze() 
-    let solutionImg = maze.solveMaze((1,1) , (50,50))
-    let mazeSpr = engine.create_and_register_sprite(mazeImg,offset_w,offset_h,0)
-    let player = engine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),offset_w+1,offset_h+1,2)
-    let solutionSpr = engine.create_and_register_sprite(solutionImg,offset_w,offset_h,1)
-
-
-    let my_update (key : ConsoleKeyInfo) (screen : wronly_raster) (st : state) =
+    let solutionImg = maze.solveMaze((1,1) , (51,51))
+    let mazeSpr = mazeEngine.create_and_register_sprite(mazeImg,offset_w,offset_h,0)
+    let player = mazeEngine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),offset_w+1,offset_h+1,2)
+    let solutionSpr = mazeEngine.create_and_register_sprite(solutionImg,offset_w,offset_h,1)
+    
+    
+    let mazeUpdate (key : ConsoleKeyInfo) (screen : wronly_raster) (st : mazeState) =
         let dx, dy as nextMove=
             match key.KeyChar with
             |'w' -> 0.,-1.
@@ -177,11 +185,15 @@ let main()=
             st.player.move_by(dx, dy)
             Log.msg "Player position: x:%f,y:%f" st.player.x st.player.y
         st, key.KeyChar = 'q'
-
-
-    let st0 = { 
+    
+    let mazeState = { 
         maze = mazeSpr
         player = player
         }
 
-    engine.loop_on_key my_update st0
+    mazeEngine.loop_on_key mazeUpdate mazeState
+    
+
+
+
+    
