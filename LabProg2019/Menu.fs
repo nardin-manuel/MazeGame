@@ -9,6 +9,7 @@ module LabProg2019.Menu
 open System
 open Gfx
 open Engine
+open Maze
 
 
 type menuState = {

@@ -27,6 +27,10 @@ type mazeState = {
     player: sprite
 }
 
+type solutionState = {
+    solution : sprite
+}
+
 
 
 type maze (width, height) =    
@@ -152,6 +156,55 @@ type maze (width, height) =
             |])             
 
 
+type mazeControl(w, h) =
+
+    let mazeUpdate (key : ConsoleKeyInfo) (screen : wronly_raster) (st) =
+        let dx, dy as nextMove=
+            match key.KeyChar with
+            |'w' -> 0.,-1.
+            |'a'-> -1.,0.
+            |'s'-> 0.,1.
+            |'d'-> 1.,0.
+            |_ -> 0.,0.   
+
+        if not (st.player.checkCollissionWith(nextMove, st.maze, CharInfo.wall)) then
+            st.player.move_by(dx, dy)
+            Log.msg "Player position: x:%f,y:%f" st.player.x st.player.y
+        st, key.KeyChar = 'q'
+    
+    let solutionUpdate(key : ConsoleKeyInfo Option)(screen: wronly_raster)(st) =
+        st, key.Value.KeyChar = 'q'
+
+    member this.mazeEngine = new engine (w,h)
+
+    member this.newGame() =
+        let maze = maze(w,h)
+        let mazeSpr = this.mazeEngine.create_and_register_sprite(maze.drawMaze(),0,0,0)    
+        let player = this.mazeEngine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),1,1,2)
+
+        let mazeState = { 
+            maze = mazeSpr
+            player = player
+            }       
+
+        this.mazeEngine.loop_on_key mazeUpdate mazeState
+
+    member this.solve(maze : maze) =
+        let solutionImg = maze.solveMaze((1,1) , (51,51))
+        let solutionSpr = this.mazeEngine.create_and_register_sprite(solutionImg,0,0,1)
+        let solutionState = {
+            solution = solutionSpr            
+            }
+
+        this.mazeEngine.loop solutionUpdate solutionState
+        
+
+    //member this.resume() =
+    
+
+        
+
+        
     
     
 
@@ -159,6 +212,8 @@ let main()=
     let w = 201
     let h = 61
     let mazeEngine = new engine (w,h)
+
+
     mazeEngine.show_fps <- false
    
     let offset_w = 0
