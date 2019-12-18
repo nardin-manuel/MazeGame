@@ -62,15 +62,16 @@ type wronly_raster (w, h) =
     abstract member unsafe_plot : int * int * pixel -> unit
 
     // item setter shortcut
-    member inline this.Item 
+    member inline this.Item
         with set (x, y) px = this.unsafe_plot (x, y, px)
 
     // clear
-    abstract member clear : unit
+    abstract member clear : unit    
     default this.clear =
         for y = 0 to this.height - 1 do
             for x = 0 to this.width - 1 do
                 this.[x, y] <- pixel.empty
+                
 
     // commit
     abstract member commit : unit
@@ -322,7 +323,7 @@ type image (w, h, pixels : pixel[]) =
 
     new (w, h, ?px) = new image (w, h, Array.create (w * h) (defaultArg px pixel.empty))
 
-    member val internal pixels = pixels
+    member val internal pixels = pixels with get,set
 
     override __.unsafe_get (x, y) = pixels.[y * w + x]
     override __.unsafe_plot (x, y, px) = pixels.[y * w + x] <- px

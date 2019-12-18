@@ -25,8 +25,8 @@ type menu(width, height) =
         menuImg
 
 let main()=
-    let w = 201
-    let h = 61
+    let w = 31
+    let h = 31
     let menuEngine = new engine (w,h)
     menuEngine.show_fps <- false
     menuEngine.create_and_register_sprite(menu(w,h).draw(),0,0,1) |>ignore
