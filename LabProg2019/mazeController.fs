@@ -4,18 +4,20 @@ open System
 open Gfx
 open Engine
 open Maze
+open External
 open System.Collections
 
-type Player = {
-    name : String
-    score : int
-    mazeNumber : int
-    }
 
 type mazeState = {
     maze: maze
     mazeSpr: sprite
     playerSpr: sprite
+    }
+
+type Player = {
+    name : String
+    score : int
+    mazeState : mazeState
     }
     
 type mazeControl(w, h) =
@@ -31,19 +33,31 @@ type mazeControl(w, h) =
         if not (st.playerSpr.checkCollissionWith(nextMove, st.mazeSpr, CharInfo.wall)) then
             st.playerSpr.move_by(dx, dy)
             Log.msg "Player position: x:%f,y:%f" st.playerSpr.x st.playerSpr.y
+
         st, key.KeyChar = 'q'
     
-    let solutionUpdate(key : ConsoleKeyInfo Option)(screen: wronly_raster)(st) =
-        st, key.Value.KeyChar = 'q'
+    //let solutionUpdate(key : ConsoleKeyInfo Option)(screen: wronly_raster)(st) =
+    //    st, key.Value.KeyChar = 'q'
 
-    member private this.mazeEngine = new engine(w,h)
-    member private this.players = new ArrayList()
-    member private this.mazes = new ArrayList()
+    let solutionUpdate(key: ConsoleKeyInfo)(screen: wronly_raster)(st) = 
+        st, key.KeyChar ='q'
+
+    let mazeEngine = new engine(w,h)
+    member val players = new ArrayList()
+   // member private this.mazes = new ArrayList()
 
     member this.newGame() =
+        mazeEngine.show_fps <- false
+        
         let maze = maze(w,h)
-        let mazeSpr = this.mazeEngine.create_and_register_sprite(maze.drawMaze(),0,0,0)    
-        let playerSpr = this.mazeEngine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),1,1,2)
+        let entry, exit = maze.createMaze()
+        let mazeImg = maze.drawMaze()
+        Log.msg "Create maze IMG"
+        let mazeSpr = mazeEngine.create_and_register_sprite(mazeImg,0,0,0)
+        Log.msg "Create maze Spr"    
+        let playerSpr = mazeEngine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),1,1,2)
+        Log.msg "Create maze player"
+       // let playerName = System.Console.ReadLine()
         let mazeState = {
             maze = maze
             mazeSpr = mazeSpr
@@ -53,22 +67,29 @@ type mazeControl(w, h) =
         let player = {
             name = "Gianni"
             score = 0
-            mazeNumber = this.mazes.Add(mazeState)
+            mazeState = mazeState
             }
-        this.players.Add(player) |> ignore     
 
-        this.mazeEngine.loop_on_key mazeUpdate mazeState
+        this.players.Add(player) |> ignore   
+        
+        
 
-    member this.solve(maze : maze) =
-        let solutionImg= maze.drawSolution((1,1),(31,31))
-        let solutionSpr = this.mazeEngine.create_and_register_sprite(solutionImg,0,0,1)
+        mazeEngine.loop_on_key mazeUpdate mazeState
+        player
+
+    member this.solve(player: Player) =
+        
+        let solutionImg= player.mazeState.maze.drawSolution((1,1),(31,31))
+        let solutionSpr = mazeEngine.create_and_register_sprite(solutionImg,0,0,1)
         let solutionState = {
             solution = solutionSpr            
             }
 
-        this.mazeEngine.loop solutionUpdate solutionState
-        
+        mazeEngine.loop_on_key solutionUpdate solutionState
+        //player
 
-    member this.resume(player : Player) =        
-        this.mazeEngine.loop_on_key mazeUpdate 
+    member this.resume(player : Player ) =          
+        mazeEngine.loop_on_key mazeUpdate player.mazeState
+        //player
+
     

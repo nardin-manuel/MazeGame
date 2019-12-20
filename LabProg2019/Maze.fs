@@ -12,6 +12,7 @@ open Gfx
 open Engine
 
 let rnd = System.Random()
+
 type CharInfo with
     static member wall = pixel.create(Config.filled_pixel_char, Color.DarkGray)
     static member background = pixel.create(Config.filled_pixel_char, Color.DarkBlue)
@@ -31,8 +32,7 @@ type solutionState = {
 
 
 
-type maze (width, height) =    
-    
+type maze (width, height) =      
 
     member val walls = Array2D.init width height (fun x y -> not(x%2=1 && y%2=1)) // same as -> if x%2=1 && y%2=1 then false else true
     member val visited = Array2D.create width height false with get,set
@@ -111,11 +111,14 @@ type maze (width, height) =
         ///Recursive function that visit any unvisited neighbours
         let rec visit (x,y as p) = 
           this.visited.[x,y] <- true
+
           for (nx,ny) as n in this.neighbours p do          
             if not this.visited.[nx,ny] then
-              this.visited.[x,y] <- true
-              this.removeWallBetween(p,n)|>ignore
+             // this.visited.[x,y] <- true
+              this.removeWallBetween(p,n)|> ignore
               visit n
+
+              
         visit (1, 1)
         let entranceWall = this.createEntrance(1,1)
         let exitWall = this.createRandomExit()
@@ -145,7 +148,8 @@ type maze (width, height) =
                     this.solution.[nx,ny] <- x,y                        
                     solve n
 
-        this.visited <- Array2D.init width height (fun _ _ -> false)        
+        this.visited <- Array2D.init width height (fun _ _ -> false)  
+      
         solve(1,1)
 
 
