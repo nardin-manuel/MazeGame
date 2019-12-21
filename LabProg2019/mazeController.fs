@@ -5,22 +5,31 @@ open Gfx
 open Engine
 open Maze
 open External
-open System.Collections
 
 
-type mazeState = {
+
+type MazeState = {
     maze: maze
     mazeSpr: sprite
     playerSpr: sprite
     }
 
+type SolutionState = {
+    solution : sprite
+}
+
 type Player = {
     name : String
     score : int
-    mazeState : mazeState
+    mazeState : MazeState
     }
+
+type RequestInput = {
+    strSpr : sprite
+    mutable strBuffer: String
+}
     
-type mazeControl(w, h) =
+type MazeControl(w, h) =
     let mazeUpdate (key : ConsoleKeyInfo) (screen : wronly_raster) (st) =
         let dx, dy as nextMove=
             match key.KeyChar with
@@ -42,12 +51,35 @@ type mazeControl(w, h) =
     let solutionUpdate(key: ConsoleKeyInfo)(screen: wronly_raster)(st) = 
         st, key.KeyChar ='q'
 
-    let mazeEngine = new engine(w,h)
-    member val players = new ArrayList()
-   // member private this.mazes = new ArrayList()
+    let requestInputUpdate(key: ConsoleKeyInfo)(screen: wronly_raster)(st:RequestInput) =          
 
-    member this.newGame() =
+       st.strBuffer <- st.strBuffer + string key.KeyChar
+       st.strSpr.draw_text(st.strBuffer,13,15,Color.Red)
+       st, key.KeyChar = ' '
+
+
+
+    let mazeEngine = new engine(w,h)
+    
+
+    let RequestInput() =
+        let printTextImg = new image(w, h)
+        printTextImg.draw_text("Type your name: ", 13,14, Color.Red)
+        let printTextSpr = mazeEngine.create_and_register_sprite(printTextImg,0,0,0)
+       // printTextSpr.draw_text("test", 13,14, Color.Red)
+
+        let requestInput = {
+              strSpr = printTextSpr
+              strBuffer = ""
+        }
+
+        mazeEngine.loop_on_key requestInputUpdate requestInput
+        mazeEngine.remove_all_sprite()
+        requestInput.strBuffer
+
+    member this.NewGame() =
         mazeEngine.show_fps <- false
+        let playerName = RequestInput()
         
         let maze = maze(w,h)
         let entry, exit = maze.createMaze()
@@ -57,39 +89,55 @@ type mazeControl(w, h) =
         Log.msg "Create maze Spr"    
         let playerSpr = mazeEngine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),1,1,2)
         Log.msg "Create maze player"
-       // let playerName = System.Console.ReadLine()
+
         let mazeState = {
             maze = maze
             mazeSpr = mazeSpr
             playerSpr = playerSpr
-            }   
-            
+            }               
+        
         let player = {
-            name = "Gianni"
+            name = playerName
             score = 0
             mazeState = mazeState
             }
 
-        this.players.Add(player) |> ignore   
-        
-        
+
+        Log.msg "Create player: %s" player.name
 
         mazeEngine.loop_on_key mazeUpdate mazeState
+        mazeEngine.remove_all_sprite()
         player
 
-    member this.solve(player: Player) =
-        
+    member this.Solve(player: Player) =        
         let solutionImg= player.mazeState.maze.drawSolution((1,1),(31,31))
+        mazeEngine.create_and_register_sprite(player.mazeState.mazeSpr, 0,0,0) |> ignore
         let solutionSpr = mazeEngine.create_and_register_sprite(solutionImg,0,0,1)
         let solutionState = {
             solution = solutionSpr            
             }
 
         mazeEngine.loop_on_key solutionUpdate solutionState
+        mazeEngine.remove_all_sprite()
+
+        
+
+    member this.Resume(player : Player) =
+        let mazeSpr = mazeEngine.create_and_register_sprite(player.mazeState.mazeSpr, 0,0,0)
+        let playerSpr = mazeEngine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player), int(player.mazeState.playerSpr.x), int(player.mazeState.playerSpr.y), 1)
+        let mazeState = {
+            maze = player.mazeState.maze
+            mazeSpr = mazeSpr
+            playerSpr = playerSpr
+        }
+        mazeEngine.loop_on_key mazeUpdate mazeState
+        player.mazeState.playerSpr.x <- playerSpr.x
+        player.mazeState.playerSpr.y <- playerSpr.y
+        
+        mazeEngine.remove_all_sprite()
         //player
 
-    member this.resume(player : Player ) =          
-        mazeEngine.loop_on_key mazeUpdate player.mazeState
-        //player
+
+
 
     

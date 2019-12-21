@@ -62,7 +62,20 @@ type engine (w : int, h : int, ?fps_cap : int, ?flip_queue) =
             List.length sprites
         Log.msg "registered sprite #%d: x=%g y=%g z=%d width=%d height=%d" len spr.x spr.y spr.z spr.width spr.height
 
-    member this.create_and_register_sprite (img, x, y, z) = let r = new sprite (img, x, y, z) in this.register_sprite r; r
+    member __.remove_sprite (spr : sprite) =
+        lock sprites <| fun() ->
+            sprites <- sprites 
+            |> List.filter (fun x -> not(x = spr))
+            |> List.sortBy(fun spr -> spr.z)
+
+    member __.remove_all_sprite() =
+        lock sprites <| fun() ->
+            sprites <- []
+
+    member this.create_and_register_sprite (img, x, y, z) = 
+        let r = new sprite (img, x, y, z) 
+        this.register_sprite r
+        r
     member this.create_and_register_sprite (w, h, x, y, z) = this.create_and_register_sprite (new image (w, h), x, y, z)
 
     member val auto_clear = true

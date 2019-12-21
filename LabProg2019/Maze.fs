@@ -6,13 +6,11 @@
 
 module LabProg2019.Maze
 
-open System
 open External
 open Gfx
-open Engine
+
 
 let rnd = System.Random()
-
 type CharInfo with
     static member wall = pixel.create(Config.filled_pixel_char, Color.DarkGray)
     static member background = pixel.create(Config.filled_pixel_char, Color.DarkBlue)
@@ -20,26 +18,13 @@ type CharInfo with
     static member internal path = pixel.filled Color.Green
 
 // TASK 1: implement the maze type
-
-//type mazeState = {
-//    maze : sprite
-//    player: sprite
-//}
-
-type solutionState = {
-    solution : sprite
-}
-
-
-
 type maze (width, height) =      
 
-    member val walls = Array2D.init width height (fun x y -> not(x%2=1 && y%2=1)) // same as -> if x%2=1 && y%2=1 then false else true
+    member val walls = Array2D.init width height (fun x y -> not(x%2=1 && y%2=1))
     member val visited = Array2D.create width height false with get,set
     member val solution = Array2D.create width height (0,0) : (int*int)[,]
-
-
-
+    
+    
     member private this.isLegalPoint (x,y) =
         x > 0 && x < width-1 && y > 0 && y < height-1
 
@@ -49,11 +34,11 @@ type maze (width, height) =
     member private this.neighbours (x,y) = 
         [(x-2,y);(x+2,y);(x,y-2);(x,y+2)]
         |> List.filter this.isLegalPoint
-        |> List.sortBy (fun x -> rnd.Next())             
+        |> List.sortBy (fun _ -> rnd.Next())             
     
     member private this.directNeighbours(x,y) =
         [(x-1,y);(x+1,y);(x,y-1);(x,y+1)]
-        |>List.filter (fun (x,y) -> not <| this.walls.[x,y])
+        |>List.filter (fun (x,y) -> not this.walls.[x,y])
         |>List.filter this.isLegalPoint 
 
     member private this.rndPerimeterWall(x,y):int*int =
@@ -94,15 +79,18 @@ type maze (width, height) =
         let randomCell = this.rndPerimeterCell()
         Log.msg "Creo un'uscita"
         let x,y as exitPoint = this.removeWallBetween((randomCell), this.rndPerimeterWall(randomCell))
-        let nx,ny = [(x+1,y);(x-1,y);(x,y+1);x,(y-1)]
+        let nx,ny = [(x+1,y);(x-1,y);(x,y+1);(x,y-1)]
                     |>List.filter this.isLegalPoint 
-                    |>List.exactlyOne
+                    //|>List.exactlyOne
+                    |>List.head
 
         if this.walls.[nx,ny] then
+            this.walls.[x,y] <- true
             this.createRandomExit()
         else
             exitPoint                      
 
+           
     ///Create an entrance removing one of the perimeter wall sorrounding the player
     member private this.createEntrance(x,y) = 
         this.removeWallBetween((x,y), this.rndPerimeterWall(x,y))
@@ -114,7 +102,6 @@ type maze (width, height) =
 
           for (nx,ny) as n in this.neighbours p do          
             if not this.visited.[nx,ny] then
-             // this.visited.[x,y] <- true
               this.removeWallBetween(p,n)|> ignore
               visit n
 
@@ -126,7 +113,7 @@ type maze (width, height) =
         entranceWall, exitWall
           
     member this.drawMaze() =
-        image(width,height,[|                 
+        image(width,height,[|                
             for y in 0..height-1 do
                for x in 0..width-1 do                    
                    if this.walls.[x,y]  then
@@ -134,11 +121,7 @@ type maze (width, height) =
                    else yield CharInfo.background
                     |])
 
-                
-
-            
-        
-
+ 
     
     member this.createSolution() =
         let rec solve (x,y as p) =
@@ -180,47 +163,7 @@ type maze (width, height) =
 
 
 
-//let main()=
-//    let w = 31
-//    let h = 31
-//    let mazeEngine = new engine (w,h)
 
-
-//    mazeEngine.show_fps <- false
-   
-//    let offset_w = 0
-//    let offset_h = 0
-//    let maze = maze(w, h)
-//    let entrancWall, exitWall = maze.createMaze()
-//    let mazeImg = maze.drawMaze() 
-//    //let solutionImg = maze.solveMaze((1,1) , (51,51))
-//    maze.createSolution((1,1),(7,7))
-//    let solutionImg = maze.drawSolution((1,1),(7,7))
-//    let mazeSpr = mazeEngine.create_and_register_sprite(mazeImg,offset_w,offset_h,0)
-//    let player = mazeEngine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),offset_w+1,offset_h+1,2)
-//    let solutionSpr = mazeEngine.create_and_register_sprite(solutionImg,offset_w,offset_h,1)
-    
-    
-//    let mazeUpdate (key : ConsoleKeyInfo) (screen : wronly_raster) (st : mazeState) =
-//        let dx, dy as nextMove=
-//            match key.KeyChar with
-//            |'w' -> 0.,-1.
-//            |'a'-> -1.,0.
-//            |'s'-> 0.,1.
-//            |'d'-> 1.,0.
-//            |_ -> 0.,0.
-
-//        if not (st.player.checkCollissionWith(nextMove, mazeSpr, CharInfo.wall)) then
-//            st.player.move_by(dx, dy)
-//            Log.msg "Player position: x:%f,y:%f" st.player.x st.player.y
-//        st, key.KeyChar = 'q'
-    
-//    let mazeState = { 
-//        maze = mazeSpr
-//        player = player
-//        }
-
-//    mazeEngine.loop_on_key mazeUpdate mazeState
     
 
 
