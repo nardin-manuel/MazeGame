@@ -23,13 +23,18 @@ type maze (width, height) =
     member val walls = Array2D.init width height (fun x y -> not(x%2=1 && y%2=1))
     member val visited = Array2D.create width height false with get,set
     member val solution = Array2D.create width height (0,0) : (int*int)[,]
-    
-    
+    member val entry = 1,1 with get, set
+    member val exit = 1,1 with get, set
+    member val stack = new System.Collections.Generic.Stack<int*int>()
+      
     member private this.isLegalPoint (x,y) =
         x > 0 && x < width-1 && y > 0 && y < height-1
 
-    member private this.isNotLegalPoint(x,y) =
-        not(this.isLegalPoint(x,y))
+    member private this.isWall(x,y) = 
+        this.walls.[x,y]
+
+    member private this.isVisited(x,y) =
+        this.visited.[x,y]
 
     member private this.neighbours (x,y) = 
         [(x-2,y);(x+2,y);(x,y-2);(x,y+2)]
@@ -38,40 +43,40 @@ type maze (width, height) =
     
     member private this.directNeighbours(x,y) =
         [(x-1,y);(x+1,y);(x,y-1);(x,y+1)]
-        |>List.filter (fun (x,y) -> not this.walls.[x,y])
-        |>List.filter this.isLegalPoint 
+        |>List.filter (fun (x,y) -> x >= 0 && x < width && y >= 0 && y < height)
+        |>List.filter (not << this.isWall)
 
     member private this.rndPerimeterWall(x,y):int*int =
         [(x-2,y);(x+2,y);(x,y-2);(x,y+2)]
-        |> List.filter this.isNotLegalPoint
-        |> List.sortBy(fun x -> rnd.Next())
+        |> List.filter (not << this.isLegalPoint)
+        |> List.sortBy(fun _ -> rnd.Next())
         |> List.head
 
     member private this.rndPerimeterCell() =
-        [
-            (rnd.Next(1, width-2), 1);//top cell
-            (width-2, rnd.Next(1, height-2)); //right cell
-            (rnd.Next(1, width-2), height-2);//bottom cell
-            (1, rnd.Next(1, height-2)) //left cell
-        ]
-        |>List.sortBy(fun x -> rnd.Next())
+        [(rnd.Next(1, width-2), 1);//top cell
+         (width-2, rnd.Next(1, height-2)); //right cell
+         (rnd.Next(1, width-2), height-2);//bottom cell
+         (1, rnd.Next(1, height-2))] //left cell        
+        |>List.sortBy(fun _ -> rnd.Next())
         |>List.head
         
+    member private this.rndPathCell() =
+        let x = rnd.Next(0, width-1)
+        let y = rnd.Next(0, height-1)
+
+        if not this.walls.[x, y] then
+            x,y
+        else this.rndPathCell()
+
     ///Function that remove the wall between two cell.
     member private this.removeWallBetween ((x1,y1), (x2,y2)) =
         if x1 <> x2 then
             let wallPos = (x1+x2)/2
             this.walls.[wallPos, y1] <- false
-            //this.solution.[wallPos , y1] <- x1, y1
-            //if isLegalPoint(x2,y2) then
-            //    this.solution.[x2, y2] <- wallPos , y1
             wallPos, y1
         else
             let wallPos = (y1+y2)/2
             this.walls.[x1, wallPos] <- false
-        //this.solution.[x1, wallPos] <- x1,y1
-        //if isLegalPoint(x2,y2) then
-        //    this.solution.[x2,y2] <- x1 , wallPos
             x1, wallPos
 
     ///Create a random exit removing a random wall in perimeter
@@ -95,22 +100,39 @@ type maze (width, height) =
     member private this.createEntrance(x,y) = 
         this.removeWallBetween((x,y), this.rndPerimeterWall(x,y))
 
-    member this.createMaze() =   
+    member this.createMaze(algorithm) =         
         ///Recursive function that visit any unvisited neighbours
-        let rec visit (x,y as p) = 
+        let rec recursiveBacktracker (x,y as p) = 
           this.visited.[x,y] <- true
-
           for (nx,ny) as n in this.neighbours p do          
             if not this.visited.[nx,ny] then
               this.removeWallBetween(p,n)|> ignore
-              visit n
-
+              recursiveBacktracker n
               
-        visit (1, 1)
+
+        let stackBacktracker(x,y as p) =
+            this.stack.Push(p)
+            this.visited.[x,y] <- true
+            while this.stack.Count > 0 do
+                let currentCell = this.stack.Pop()
+                let neighbors = this.neighbours currentCell           
+                match List.tryFind (not << this.isVisited) neighbors with
+                |Some (nx, ny as neighbor) -> this.visited.[nx,ny] <- true
+                                              this.removeWallBetween(currentCell, neighbor) |> ignore
+                                              this.stack.Push(currentCell)
+                                              this.stack.Push(neighbor)
+                |None -> ()
+                            
+                    
+        //recursiveBacktracker (1, 1)
+        stackBacktracker(1,1)
+
         let entranceWall = this.createEntrance(1,1)
         let exitWall = this.createRandomExit()
         Log.msg "Entrance wall: %A. Exit wall: %A" entranceWall exitWall
-        entranceWall, exitWall
+        this.entry <- entranceWall
+        this.exit <- exitWall
+        
           
     member this.drawMaze() =
         image(width,height,[|                
@@ -131,9 +153,25 @@ type maze (width, height) =
                     this.solution.[nx,ny] <- x,y                        
                     solve n
 
-        this.visited <- Array2D.init width height (fun _ _ -> false)  
-      
-        solve(1,1)
+
+
+        let stackSolve(x,y as p) = 
+            this.visited.[x,y]<- true
+            this.stack.Push(p)
+            while this.stack.Count > 0 do
+            let currentCell = this.stack.Pop()
+            let neighbors = this.directNeighbours currentCell
+            match List.tryFind (not << this.isVisited) neighbors with
+            |Some (nx,ny as neighbor) -> this.stack.Push(currentCell)
+                                         this.stack.Push(neighbor)
+                                         this.visited.[nx,ny] <- true
+                                         this.solution.[nx,ny] <- currentCell
+            |None -> ()
+
+        this.visited <- Array2D.init width height (fun _ _ -> false)
+        this.stack.Clear()
+        stackSolve(0,0)
+
 
 
     member this.drawSolution(startPoint, endPoint) =

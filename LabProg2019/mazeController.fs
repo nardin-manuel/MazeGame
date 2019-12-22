@@ -82,12 +82,12 @@ type MazeControl(w, h) =
         let playerName = RequestInput()
         
         let maze = maze(w,h)
-        let entry, exit = maze.createMaze()
+        maze.createMaze()
         let mazeImg = maze.drawMaze()
         Log.msg "Create maze IMG"
         let mazeSpr = mazeEngine.create_and_register_sprite(mazeImg,0,0,0)
         Log.msg "Create maze Spr"    
-        let playerSpr = mazeEngine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),1,1,2)
+        let playerSpr = mazeEngine.create_and_register_sprite(image.rectangle(1,1, CharInfo.player),fst(maze.entry),snd(maze.entry),2)
         Log.msg "Create maze player"
 
         let mazeState = {
@@ -102,7 +102,7 @@ type MazeControl(w, h) =
             mazeState = mazeState
             }
 
-
+         
         Log.msg "Create player: %s" player.name
 
         mazeEngine.loop_on_key mazeUpdate mazeState
@@ -110,7 +110,8 @@ type MazeControl(w, h) =
         player
 
     member this.Solve(player: Player) =        
-        let solutionImg= player.mazeState.maze.drawSolution((1,1),(31,31))
+        let entry, exit = player.mazeState.maze.entry, player.mazeState.maze.exit
+        let solutionImg= player.mazeState.maze.drawSolution(entry,exit)
         mazeEngine.create_and_register_sprite(player.mazeState.mazeSpr, 0,0,0) |> ignore
         let solutionSpr = mazeEngine.create_and_register_sprite(solutionImg,0,0,1)
         let solutionState = {

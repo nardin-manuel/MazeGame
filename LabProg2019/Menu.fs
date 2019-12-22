@@ -36,9 +36,6 @@ let main()=
     let menuSelectorSpr = menuEngine.create_and_register_sprite(image.rectangle(1, 1, pixel.create(char('*'), Color.Cyan)),10,10,1)
     let mazeController = MazeControl(w,h)
 
-    //let startGame()=
-    //    Maze.main()
-
     let newGame()=
         mazeController.NewGame()
 
@@ -77,12 +74,12 @@ let main()=
             textImg.draw_text(player.name, 13, pos, Color.Red)
             pos  <- pos + 4
         let menuSelectorSpr = subMenuEngine.create_and_register_sprite(image.rectangle(1, 1, pixel.create(char('*'), Color.Cyan)),10,10,1)
+        subMenuEngine.create_and_register_sprite(textImg,0,0,0) |> ignore
 
         let selectPlayerState = {
             selector = menuSelectorSpr
             }
 
-        let listSpr = subMenuEngine.create_and_register_sprite(textImg,0,0,0)
         subMenuEngine.loop_on_key selectPlayerUpdate selectPlayerState
         (int(selectPlayerState.selector.y)-10)/4
 
