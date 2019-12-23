@@ -29,7 +29,7 @@ type Menu(width, height) =
 
 let main()=
     let w = 101
-    let h = 51
+    let h = 50
     let menuEngine = new engine (w,h)
     menuEngine.show_fps <- false
     menuEngine.create_and_register_sprite(Menu(w,h).Draw(),0,0,1) |> ignore
