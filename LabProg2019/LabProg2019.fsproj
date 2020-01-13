@@ -71,6 +71,7 @@
     <Compile Include="Engine.fs" />
     <Compile Include="Maze.fs" />
     <Compile Include="MazeController.fs" />
+    <Compile Include="PlayersDatabase.fs" />
     <Compile Include="Menu.fs" />
     <Compile Include="Test.fs" />
     <Compile Include="Main.fs" />

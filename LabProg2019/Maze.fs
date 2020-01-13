@@ -17,7 +17,6 @@ type CharInfo with
     static member player = pixel.create(char('\178'),Color.Red)
     static member internal path = pixel.filled Color.Green
 
-// TASK 1: implement the maze type
 type maze (width, height) =      
 
     member val walls = Array2D.init width height (fun x y -> not(x%2=1 && y%2=1))

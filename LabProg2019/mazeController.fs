@@ -1,4 +1,10 @@
-﻿module LabProg2019.MazeController
+﻿(*
+* LabProg2019 - Progetto di Programmazione a.a. 2019-20
+* MazeController.fs: MazeController
+* (C) 2019 Manuel Nardin @ Universita' Ca' Foscari di Venezia
+*)
+
+module LabProg2019.MazeController
 
 open System
 open System.Diagnostics
@@ -23,9 +29,9 @@ type SolutionState = {
 type Player = {
     name : String
     score : int
-    mazeState : MazeState
-    
+    mazeState : MazeState    
     }
+
 
 
     
