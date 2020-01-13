@@ -27,6 +27,7 @@ type maze (width, height) =
     member val exit = 1,1 with get, set
     member val stack = new System.Collections.Generic.Stack<int*int>()
       
+
     member private this.isLegalPoint (x,y) =
         x > 0 && x < width-1 && y > 0 && y < height-1
 

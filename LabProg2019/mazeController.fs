@@ -1,18 +1,18 @@
 ﻿module LabProg2019.MazeController
 
 open System
+open System.Diagnostics
 open Gfx
 open Engine
 open Maze
 open External
 
 
-
 type MazeState = {
     maze: maze
     mazeSpr: sprite
     playerSpr: sprite
-    startTime : DateTime
+    elapsedTime : Stopwatch
     informationBar: sprite
     }
 
@@ -27,14 +27,12 @@ type Player = {
     
     }
 
-type RequestInput = {
-    strSpr : sprite
-    mutable strBuffer: String
-}
+
     
 type MazeControl(w, h) =
-    let mazeUpdate (key : ConsoleKeyInfo Option) (screen : wronly_raster) (st) =
-        let elapsedTimeStr = String.Concat(["Elapsed Time:"; (DateTime.Now  - st.startTime).ToString(@"mm\:ss") ])
+    let mazeUpdate (key : ConsoleKeyInfo Option) (screen : wronly_raster) (st) =        
+        let elapsedTimeStr = String.Concat(["Elapsed Time:"; (st.elapsedTime.Elapsed).ToString(@"mm\:ss") ])
+        
         let exitCode = match key with
                        |Some key -> let dx, dy as nextMove=      
                                             match key.KeyChar with
@@ -52,49 +50,18 @@ type MazeControl(w, h) =
                        |None -> st,false
 
         st.informationBar.draw_text(elapsedTimeStr,0,0, Color.Red)
-        exitCode
+        exitCode   
         
-        
-    
     let solutionUpdate(key : ConsoleKeyInfo Option)(screen: wronly_raster)(st) =
         st, match key with
             |Some key -> key.KeyChar = 'q'
             |None -> false
 
-    let requestInputUpdate(key: ConsoleKeyInfo)(screen: wronly_raster)(st:RequestInput) =          
-
-       match key.KeyChar with
-       |'\008' -> st.strSpr.clear
-                  st.strBuffer <- st.strBuffer.Remove(st.strBuffer.Length-1)
-                  st.strSpr.draw_text("Type your name: ", 13,14, Color.Red)
-       |_ ->     st.strBuffer <- st.strBuffer + string key.KeyChar
-       
-       
-       
-       st.strSpr.draw_text(st.strBuffer,13,15,Color.Red)
-       st, key.KeyChar = ' '
-
     let mazeEngine = new engine(w,h)
-    
 
-    let RequestInput() =
-        let printTextImg = new image(w, h)
-        printTextImg.draw_text("Type your name: ", 13,14, Color.Red)
-        let printTextSpr = mazeEngine.create_and_register_sprite(printTextImg,0,0,0)
-
-        let requestInput = {
-              strSpr = printTextSpr
-              strBuffer = ""
-        }
-
-        mazeEngine.loop_on_key requestInputUpdate requestInput
-        mazeEngine.remove_all_sprite()
-        requestInput.strBuffer
-
-    member this.NewGame() =
+    member this.NewGame(playerName) =
         mazeEngine.show_fps <- false
-        let playerName = RequestInput()
-        
+                
         let maze = maze(w,h-1)
         maze.createMaze()
         let mazeImg = maze.drawMaze()
@@ -109,7 +76,7 @@ type MazeControl(w, h) =
             maze = maze
             mazeSpr = mazeSpr
             playerSpr = playerSpr
-            startTime = DateTime.Now
+            elapsedTime = new Stopwatch()
             informationBar = informationBar
             }               
         
@@ -120,7 +87,9 @@ type MazeControl(w, h) =
             }
                      
         Log.msg "Create player: %s" player.name
+        mazeState.elapsedTime.Start()
         mazeEngine.loop mazeUpdate mazeState
+        mazeState.elapsedTime.Stop()
         mazeEngine.remove_all_sprite()
         player
 
@@ -145,15 +114,17 @@ type MazeControl(w, h) =
             maze = player.mazeState.maze
             mazeSpr = mazeSpr
             playerSpr = playerSpr
-            startTime = player.mazeState.startTime
+            elapsedTime = player.mazeState.elapsedTime
             informationBar = informationBar
         }
+        mazeState.elapsedTime.Start()
         mazeEngine.loop mazeUpdate mazeState
+        mazeState.elapsedTime.Stop()
         player.mazeState.playerSpr.x <- playerSpr.x
         player.mazeState.playerSpr.y <- playerSpr.y
         
         mazeEngine.remove_all_sprite()
-        //player
+
 
 
 
