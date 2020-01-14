@@ -120,7 +120,11 @@ let main()=
     let mazeController = MazeControl(w,h)
     let menu = Menu(w,h, ["New Game";"Resume Game";"Solve Maze"])
     
-    let addPlayer = fun _ -> playersDb.addPlayer(mazeController.NewGame(menu.requestInput("Player's name")))
+    let addPlayer = fun _ -> let playerName = menu.requestInput("Player's name")                            
+                             if not <| playersDb.playerExist(playerName) then
+                                playersDb.addPlayer(mazeController.NewGame(playerName))
+                             else 
+                             
     
     let resumeGame = fun _ -> let submenu = Menu(w,h, playersDb.toString())
                               for player in playersDb.getPlayersList() do

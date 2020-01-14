@@ -14,7 +14,7 @@ open MazeController
 
 type PlayersDatabase() =
     let playersList = List<Player>()
-
+    
     member this.addPlayer(player: Player) =
         playersList.Add(player)
 
@@ -24,6 +24,10 @@ type PlayersDatabase() =
     member this.getPlayerFromName(playerName: String) =
         playersList.Find(fun player -> player.name = playerName)
 
+    member this.playerExist(playerName:String) =        
+        playersList.Exists(fun player -> player.name = playerName)      
+            
+    
     member this.getPlayersList() = 
         playersList
 
