@@ -11,7 +11,7 @@ open System.Collections.Generic
 
 open Engine
 open Gfx
-open Controller
+open MazeController
 open PlayersDatabase
 
 type MenuState = {
@@ -53,14 +53,14 @@ type Menu(width: int, heigh: int, itemList: list<String>) =
 
         match key.KeyChar with
         |'\008' -> st.strSpr.clear
-                   if st.strBuffer.Length>0 then
+                   if st.strBuffer.Length > 0 then
                      st.strBuffer <- st.strBuffer.Remove(st.strBuffer.Length-1)
-                   //st.strSpr.draw_text("Type your name: ", 13,14, Color.Red)
+                   st.strSpr.draw_text("Player's name ", 4,4, Color.Red)
     
         |key when isValidKey(key) -> st.strBuffer <- st.strBuffer + string key
         |_ -> () 
             
-        st.strSpr.draw_text(st.strBuffer,13,15,Color.Red)
+        st.strSpr.draw_text(st.strBuffer,4,5,Color.Red)
         st, key.KeyChar = ' '
 
 
@@ -94,6 +94,10 @@ type Menu(width: int, heigh: int, itemList: list<String>) =
         menu.menuEngine.loop_on_key requestInputUpdate requestState
         requestState.strBuffer
         
+    member this.drawText(text: String) =
+        let menuImg = image(width,heigh)
+        menuImg.draw_text(text, this.h_offset, 5, this.textColor)
+
 
     member this.addAction(action: unit->unit) = 
         actionList.Add(action) 
@@ -117,26 +121,27 @@ let main()=
     let w = 31
     let h = 30
     let playersDb = PlayersDatabase()
-    let mazeController = Controller(w,h)
+    let mazeController = MazeControl(w,h)
     let menu = Menu(w,h, ["New Game";"Resume Game";"Solve Maze"])
     
     let addPlayer = fun _ -> let playerName = menu.requestInput("Player's name")                            
                              if not <| playersDb.playerExist(playerName) then
                                 playersDb.addPlayer(mazeController.NewGame(playerName))
-                              
+                             else
+                                Log.msg("Nome non disponibile")
                                 
-                             
     
-    let resumeGame = fun _ -> let submenu = Menu(w,h, playersDb.toList())
+    let resumeGame = fun _ -> let submenu = Menu(w,h, playersDb.toString())
                               for player in playersDb.getPlayersList() do
                                 submenu.addAction(fun _ -> mazeController.Resume(player))
                               submenu.run()
                               
 
-    let solveMaze = fun _ -> let submenu = Menu(w,h, playersDb.toList())
+    let solveMaze = fun _ -> let submenu = Menu(w,h, playersDb.toString())
                              for player in playersDb.getPlayersList() do
                                 submenu.addAction(fun _ -> mazeController.Solve(player))
                              submenu.run()
+                             
                              
 
     menu.addAction(addPlayer)
