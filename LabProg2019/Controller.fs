@@ -1,10 +1,10 @@
 ﻿(*
 * LabProg2019 - Progetto di Programmazione a.a. 2019-20
-* MazeController.fs: MazeController
+* Controller.fs: 
 * (C) 2019 Manuel Nardin @ Universita' Ca' Foscari di Venezia
 *)
 
-module LabProg2019.MazeController
+module LabProg2019.Controller
 
 open System
 open System.Diagnostics
@@ -35,7 +35,7 @@ type Player = {
 
 
     
-type MazeControl(w, h) =
+type Controller(w, h) =
     let mazeUpdate (key : ConsoleKeyInfo Option) (screen : wronly_raster) (st) =        
         let elapsedTimeStr = String.Concat(["Elapsed Time:"; (st.elapsedTime.Elapsed).ToString(@"mm\:ss") ])
         

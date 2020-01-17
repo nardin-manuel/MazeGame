@@ -85,8 +85,7 @@ type maze (width, height) =
         Log.msg "Creo un'uscita"
         let x,y as exitPoint = this.removeWallBetween((randomCell), this.rndPerimeterWall(randomCell))
         let nx,ny = [(x+1,y);(x-1,y);(x,y+1);(x,y-1)]
-                    |>List.filter this.isLegalPoint 
-                    //|>List.exactlyOne
+                    |>List.filter this.isLegalPoint                     
                     |>List.head
 
         if this.walls.[nx,ny] then
@@ -100,16 +99,15 @@ type maze (width, height) =
     member private this.createEntrance(x,y) = 
         this.removeWallBetween((x,y), this.rndPerimeterWall(x,y))
 
-    member this.createMaze(algorithm) =         
+    member this.createMaze() =         
         ///Recursive function that visit any unvisited neighbours
-        let rec recursiveBacktracker (x,y as p) = 
-          this.visited.[x,y] <- true
-          for (nx,ny) as n in this.neighbours p do          
-            if not this.visited.[nx,ny] then
-              this.removeWallBetween(p,n)|> ignore
-              recursiveBacktracker n
+        //let rec recursiveBacktracker (x,y as p) = 
+        //  this.visited.[x,y] <- true
+        //  for (nx,ny) as n in this.neighbours p do          
+        //    if not this.visited.[nx,ny] then
+        //      this.removeWallBetween(p,n)|> ignore
+        //      recursiveBacktracker n
               
-
         let stackBacktracker(x,y as p) =
             this.stack.Push(p)
             this.visited.[x,y] <- true
@@ -146,12 +144,12 @@ type maze (width, height) =
  
     
     member this.createSolution() =
-        let rec solve (x,y as p) =
-            this.visited.[x,y] <- true
-            for(nx,ny) as n in this.directNeighbours p do
-                if not this.visited.[nx,ny] then
-                    this.solution.[nx,ny] <- x,y                        
-                    solve n
+        //let rec solve (x,y as p) =
+        //    this.visited.[x,y] <- true
+        //    for(nx,ny) as n in this.directNeighbours p do
+        //        if not this.visited.[nx,ny] then
+        //            this.solution.[nx,ny] <- x,y                        
+        //            solve n
 
 
 

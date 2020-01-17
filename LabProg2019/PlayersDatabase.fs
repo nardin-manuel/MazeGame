@@ -7,10 +7,7 @@
 module LabProg2019.PlayersDatabase
 open System.Collections.Generic
 open System
-open MazeController
-
-
-
+open Controller
 
 type PlayersDatabase() =
     let playersList = List<Player>()
@@ -31,7 +28,7 @@ type PlayersDatabase() =
     member this.getPlayersList() = 
         playersList
 
-    member this.toString() =
+    member this.toList() =
         [
         for player in playersList do
             yield player.name

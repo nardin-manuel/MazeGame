@@ -29,9 +29,8 @@ let main_game () =
     client.Connect ()
     Log <- new remote_logger (client)
 
-    // TODO: call your main here
-    //Maze.main()
     Menu.main()
+    p.Kill()
     0
 
 // log mode (server)
