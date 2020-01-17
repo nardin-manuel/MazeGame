@@ -18,15 +18,16 @@ type CharInfo with
     static member internal path = pixel.filled Color.Green
 
 type maze (width, height) =      
-
+    
     member val walls = Array2D.init width height (fun x y -> not(x%2=1 && y%2=1))
     member val visited = Array2D.create width height false with get,set
     member val solution = Array2D.create width height (0,0) : (int*int)[,]
     member val entry = 1,1 with get, set
     member val exit = 1,1 with get, set
+    //Explicit stack to use in backtracking
     member val stack = new System.Collections.Generic.Stack<int*int>()
       
-
+    //Return the cell that is inside the perimeter
     member private this.isLegalPoint (x,y) =
         x > 0 && x < width-1 && y > 0 && y < height-1
 
@@ -35,23 +36,27 @@ type maze (width, height) =
 
     member private this.isVisited(x,y) =
         this.visited.[x,y]
-
+    
+    //Return neighbors cell through wall
     member private this.neighbours (x,y) = 
         [(x-2,y);(x+2,y);(x,y-2);(x,y+2)]
         |> List.filter this.isLegalPoint
         |> List.sortBy (fun _ -> rnd.Next())             
     
+    //Return neighbors cell including cell that was wall if is not a wall anymore
     member private this.directNeighbours(x,y) =
         [(x-1,y);(x+1,y);(x,y-1);(x,y+1)]
         |>List.filter (fun (x,y) -> x >= 0 && x < width && y >= 0 && y < height)
         |>List.filter (not << this.isWall)
 
+    //Return a random cell that is a perimeter wall of the cell. 
     member private this.rndPerimeterWall(x,y):int*int =
         [(x-2,y);(x+2,y);(x,y-2);(x,y+2)]
         |> List.filter (not << this.isLegalPoint)
         |> List.sortBy(fun _ -> rnd.Next())
         |> List.head
 
+    //Return a random cell that is a perimeter cell
     member private this.rndPerimeterCell() =
         [(rnd.Next(1, width-2), 1);//top cell
          (width-2, rnd.Next(1, height-2)); //right cell
@@ -60,6 +65,7 @@ type maze (width, height) =
         |>List.sortBy(fun _ -> rnd.Next())
         |>List.head
         
+    //Return a random cell that is not blocked by a wall
     member private this.rndPathCell() =
         let x = rnd.Next(0, width-1)
         let y = rnd.Next(0, height-1)
