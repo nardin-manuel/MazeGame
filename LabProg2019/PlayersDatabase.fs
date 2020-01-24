@@ -6,6 +6,7 @@
 
 module LabProg2019.PlayersDatabase
 open System.Collections.Generic
+open System.Linq
 open System
 open Controller
 
@@ -24,7 +25,6 @@ type PlayersDatabase() =
     member this.playerExist(playerName:String) =        
         playersList.Exists(fun player -> player.name = playerName)      
             
-    
     member this.getPlayersList() = 
         playersList
 
@@ -34,3 +34,13 @@ type PlayersDatabase() =
             yield player.name
         ]
 
+    member this.hasNotFinished() =
+        //[
+        //for player in playersList do
+        //    if player.score = 0. then
+        //        yield player
+        //]
+        playersList.Where(fun player -> player.score = 0.).ToList()
+    
+    member this.hasFinished() = 
+        playersList.Where(fun player -> not(player.score = 0.)).ToList()

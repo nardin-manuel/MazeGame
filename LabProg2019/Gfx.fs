@@ -364,10 +364,10 @@ type sprite (img : image, x_ : int, y_ : int, z_ : int) =
         this.x+dx, this.y+dy
 
     member this.checkCollissionWith ((dx,dy), object:sprite, char) =
-        let nx, ny = this.dryMove(dx, dy)
-        object.get(int(nx), int(ny)) = char
+        let nx, ny =  this.dryMove(dx, dy)
+        object.get(int(nx), int(ny)) = char 
+        ||not (int(nx) >= 0 && int(ny) >= 0 && int(nx) < object.width && int(ny) < object.height)
         
-
 
     member this.move_by (dx, dy) = this.move_by (float dx, float dy)
     

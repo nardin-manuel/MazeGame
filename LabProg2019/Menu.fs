@@ -8,14 +8,14 @@ module LabProg2019.Menu
 
 open System
 open System.Collections.Generic
-
+open System.Linq
 open Engine
 open Gfx
 open Controller
 open PlayersDatabase
 
 type MenuState = {
-    selector : sprite
+    selector : sprite option
 }
 type RequestInput = {
     strSpr : sprite
@@ -23,29 +23,35 @@ type RequestInput = {
 }
 
 type Menu(width: int, heigh: int, itemList: list<String>) =
-    let actionList = List<unit->unit>()
+    let actionList = List<unit->bool>()
 
     let menuUpdate(key: ConsoleKeyInfo) (screen:wronly_raster) (st) =
         let nextMove = match key.KeyChar with
                        |'w' -> -4.
                        |'s'-> 4.
                        |_ -> 0.
-
-        let itemNumber = (int(st.selector.y)-2)/4
-        if itemNumber < actionList.Count then
-            match key.KeyChar with
-            |' ' -> actionList.[itemNumber]()                               
-            |_ -> ()
+        
+        match st.selector with
+        |Some selector -> let itemNumber = (int(selector.y)-2)/4
+                          let exitCode = match key.KeyChar with            
+                                         |' ' -> if itemNumber < actionList.Count then
+                                                    actionList.[itemNumber]()
+                                                 else
+                                                    false
+                                         |_ -> false    
 
 
             
-        let nx, ny = st.selector.dryMove(0., nextMove) 
+                          let nx, ny = selector.dryMove(0., nextMove) 
 
         
-        if ny >= 2. && ny <= float(((actionList.Count)*4)+2) then
-            st.selector.move_by(0.,nextMove)
-    
-        st, key.KeyChar = 'q'
+                          if ny >= 2. && ny <= float(((actionList.Count)*4)+2) then
+                              selector.move_by(0.,nextMove)
+
+                          st, (key.KeyChar = 'q' || exitCode)
+        
+        |None -> st, key.KeyChar = 'q'
+        
 
     let requestInputUpdate(key: ConsoleKeyInfo) (screen: wronly_raster) (st:RequestInput) =  
         let isValidKey(key) =
@@ -68,9 +74,10 @@ type Menu(width: int, heigh: int, itemList: list<String>) =
     member val v_offset = 4 with get, set
     member val h_offset = 4
     member val textColor = Color.Red
+    member val viewSelector = true with get, set
 
     
-    member this.drawMenu() = 
+    member private this.drawMenu() = 
         let menuImg = image(width,heigh)
         let mutable y = this.v_offset
         for item in itemList do
@@ -79,6 +86,9 @@ type Menu(width: int, heigh: int, itemList: list<String>) =
 
         menuImg
 
+    member private this.drawText(text: String) =
+        let menuImg = image(width,heigh)
+        menuImg.draw_text(text, this.h_offset, 5, this.textColor)
 
     member this.requestInput(toPrint: String) =         
         let menu = Menu(width, heigh, [toPrint])
@@ -91,30 +101,31 @@ type Menu(width: int, heigh: int, itemList: list<String>) =
             strBuffer = ""
         }
 
-        menu.menuEngine.loop_on_key requestInputUpdate requestState
+        menu.run(requestInputUpdate, requestState)
+        //menu.menuEngine.loop_on_key requestInputUpdate requestState
         requestState.strBuffer
         
-    member this.drawText(text: String) =
-        let menuImg = image(width,heigh)
-        menuImg.draw_text(text, this.h_offset, 5, this.textColor)
 
 
-    member this.addAction(action: unit->unit) = 
-        actionList.Add(action) 
-        
+    member this.addAction(action: unit->bool) = 
+        actionList.Add(action)
     
-    member this.run(menuUpdate, menuState) =
+    member private this.run(menuUpdate, menuState) =
         this.menuEngine.show_fps<- false
         this.menuEngine.loop_on_key menuUpdate menuState
 
     member this.run() = 
         this.menuEngine.show_fps <- false
         this.menuEngine.create_and_register_sprite(this.drawMenu(),0,0,0) |> ignore
-        let menuSelectorSpr = this.menuEngine.create_and_register_sprite(image.rectangle(1, 1, pixel.create(char('*'), Color.Cyan)),2,4,1)
-
-        let menuState = {
-               selector = menuSelectorSpr
-               }
+        let menuState= if this.viewSelector then
+                            let menuSelectorSpr = this.menuEngine.create_and_register_sprite(image.rectangle(1, 1, pixel.create(char('*'), Color.Cyan)),2,4,1)
+                            {
+                            selector = Some(menuSelectorSpr)
+                            }
+                        else
+                            {
+                            selector = None
+                            }  
         this.menuEngine.loop_on_key menuUpdate menuState
                               
 let main()=
@@ -122,31 +133,44 @@ let main()=
     let h = 30
     let playersDb = PlayersDatabase()
     let mazeController = Controller(w,h)
-    let menu = Menu(w,h, ["New Game";"Resume Game";"Solve Maze"])
+    let menu = Menu(w,h, ["New Game";"Resume Game";"Solve Maze"; "Player Chart"])
     
-    let addPlayer = fun _ -> let playerName = menu.requestInput("Player's name")                            
-                             if not <| playersDb.playerExist(playerName) then
-                                playersDb.addPlayer(mazeController.NewGame(playerName))
-                             else 
-                             
+    let addPlayer = fun () -> let playerName = menu.requestInput("Player's name")                            
+                              if not <| playersDb.playerExist(playerName) then
+                                 playersDb.addPlayer(mazeController.NewGame(playerName))
+                              else 
+                                 Log.msg("Player name not available")
+                              false //do NOT close the current menu if the previous has been closed
     
-    let resumeGame = fun _ -> let submenu = Menu(w,h, playersDb.toList())
-                              for player in playersDb.getPlayersList() do
-                                submenu.addAction(fun _ -> mazeController.Resume(player))
-                              submenu.run()
+    let resumeGame = fun () -> let playerList = playersDb.hasNotFinished()
+                               let submenu = Menu(w,h, [for player in playerList do yield player.name])    
+                               for player in playerList do
+                                 submenu.addAction(fun () -> mazeController.Resume(player) 
+                                                             true) //close the current menu if the previous has been closed
+                               submenu.run()
+                               false                          
                               
+    let solveMaze = fun () -> let submenu = Menu(w,h, playersDb.toList())
+                              for player in playersDb.getPlayersList() do
+                                  submenu.addAction(fun () -> mazeController.Solve(player)
+                                                              true)
+                              submenu.run()
+                              false
 
-    let solveMaze = fun _ -> let submenu = Menu(w,h, playersDb.toList())
-                             for player in playersDb.getPlayersList() do
-                                submenu.addAction(fun _ -> mazeController.Solve(player))
-                             submenu.run()
+    let playerChart = fun () -> let playerList = playersDb.hasFinished()
+                                playerList.Sort(fun (p1: Player) (p2: Player) -> p1.score.CompareTo(p2.score))
+                                let submenu = Menu(w,h, [for player in playerList do yield player.name + ": " + player.score.ToString()])
+                                submenu.viewSelector <- false
+                                submenu.run()
+                                false
+
                              
-                             
+
 
     menu.addAction(addPlayer)
     menu.addAction(resumeGame)
     menu.addAction(solveMaze)
-        
+    menu.addAction(playerChart)        
     menu.run()
 
 

@@ -8,6 +8,7 @@ module LabProg2019.Controller
 
 open System
 open System.Diagnostics
+
 open Gfx
 open Engine
 open Maze
@@ -28,7 +29,7 @@ type SolutionState = {
 
 type Player = {
     name : String
-    score : int
+    mutable score : float
     mazeState : MazeState    
     }
 
@@ -51,7 +52,15 @@ type Controller(w, h) =
                                     if not (st.playerSpr.checkCollissionWith(nextMove, st.mazeSpr, CharInfo.wall)) then
                                         st.playerSpr.move_by(dx, dy)
                                         Log.msg "Player position: x:%f,y:%f" st.playerSpr.x st.playerSpr.y
-                                    st, key.KeyChar = 'q'
+
+                                    if (int(st.playerSpr.x), int(st.playerSpr.y)) = st.maze.exit then
+                                        Log.msg "Exit found!"
+                                        st.elapsedTime.Stop()                                        
+                                        st, true
+                                    else
+                                        st, key.KeyChar = 'q'
+                                   
+                                    //st, key.KeyChar = 'q'
 
                        |None -> st,false
 
@@ -86,16 +95,21 @@ type Controller(w, h) =
             informationBar = informationBar
             }               
         
-        let player = {
-            name = playerName
-            score = 0
-            mazeState = mazeState
-            }
                      
-        Log.msg "Create player: %s" player.name
+        //Log.msg "Create player: %s" player.name
         mazeState.elapsedTime.Start()
         mazeEngine.loop mazeUpdate mazeState
-        mazeState.elapsedTime.Stop()
+
+        let player = {
+            name = playerName
+            score = if not mazeState.elapsedTime.IsRunning then
+                        mazeState.elapsedTime.Elapsed.TotalSeconds
+                    else
+                        mazeState.elapsedTime.Stop()
+                        0.
+            mazeState = mazeState
+        }
+
         mazeEngine.remove_all_sprite()
         player
 
@@ -125,7 +139,14 @@ type Controller(w, h) =
         }
         mazeState.elapsedTime.Start()
         mazeEngine.loop mazeUpdate mazeState
-        mazeState.elapsedTime.Stop()
+        
+        player.score <- (
+            if not mazeState.elapsedTime.IsRunning then
+                mazeState.elapsedTime.Elapsed.TotalSeconds
+            else
+                mazeState.elapsedTime.Stop()
+                0.
+        )
         player.mazeState.playerSpr.x <- playerSpr.x
         player.mazeState.playerSpr.y <- playerSpr.y
         
