@@ -11,7 +11,7 @@ open System.Collections.Generic
 
 open Engine
 open Gfx
-open MazeController
+open Controller
 open PlayersDatabase
 
 type MenuState = {
@@ -121,23 +121,22 @@ let main()=
     let w = 31
     let h = 30
     let playersDb = PlayersDatabase()
-    let mazeController = MazeControl(w,h)
+    let mazeController = Controller(w,h)
     let menu = Menu(w,h, ["New Game";"Resume Game";"Solve Maze"])
     
     let addPlayer = fun _ -> let playerName = menu.requestInput("Player's name")                            
                              if not <| playersDb.playerExist(playerName) then
                                 playersDb.addPlayer(mazeController.NewGame(playerName))
-                             else
-                                Log.msg("Nome non disponibile")
-                                
+                             else 
+                             
     
-    let resumeGame = fun _ -> let submenu = Menu(w,h, playersDb.toString())
+    let resumeGame = fun _ -> let submenu = Menu(w,h, playersDb.toList())
                               for player in playersDb.getPlayersList() do
                                 submenu.addAction(fun _ -> mazeController.Resume(player))
                               submenu.run()
                               
 
-    let solveMaze = fun _ -> let submenu = Menu(w,h, playersDb.toString())
+    let solveMaze = fun _ -> let submenu = Menu(w,h, playersDb.toList())
                              for player in playersDb.getPlayersList() do
                                 submenu.addAction(fun _ -> mazeController.Solve(player))
                              submenu.run()
